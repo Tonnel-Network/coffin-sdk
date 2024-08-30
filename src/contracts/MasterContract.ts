@@ -427,6 +427,7 @@ export class Evaa implements Contract {
             //         `Outdated SDK version. It supports only master code version ${MAINNET_VERSION} on mainnet, but the current master code version is ${this._data.upgradeConfig.masterCodeVersion}`,
             //     );
             // }
+
             this.lastSync = Math.floor(Date.now() / 1000);
         } else {
             throw Error('Master contract is not active');

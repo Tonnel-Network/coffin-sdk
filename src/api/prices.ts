@@ -30,5 +30,6 @@ export async function getPrices(endpoints: string[] = ["https://api.tonnel.netwo
     return {
         dict: Cell.fromBoc(Buffer.from(rawPrices[0].pricesPackedCell,'hex'))[0].beginParse().loadDictDirect(Dictionary.Keys.BigUint(256), Dictionary.Values.BigVarUint(4)),
         dataCell: Cell.fromBoc(Buffer.from(rawPrices[0].priceCell,'hex'))[0]
+
     };
 }

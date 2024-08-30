@@ -1,6 +1,6 @@
 {
   "name": "coffin-sdk",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "SDK for Coffin contracts",
   "main": "dist/index.js",
   "files": [

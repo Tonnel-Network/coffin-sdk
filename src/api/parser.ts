@@ -176,8 +176,8 @@ export function parseMasterData(masterDataBOC: string, testnet: boolean = false)
         const totalBorrow = calculatePresentValue(assetData.bRate, assetData.totalBorrow);
         assetsReserves.set(assetID, assetData.balance - totalSupply + totalBorrow);
 
-        apy.supply.set(assetID, (1 + (Number(assetData.supplyInterest) / 1e12) * 24 * 3600) ** 365 - 1);
-        apy.borrow.set(assetID, (1 + (Number(assetData.borrowInterest) / 1e12) * 24 * 3600) ** 365 - 1);
+        apy.supply.set(assetID, (1 + (Number(assetData.supplyInterest) / 1e8) * 8.64) ** 365 - 1);
+        apy.borrow.set(assetID, (1 + (Number(assetData.borrowInterest) / 1e8) * 8.64) ** 365 - 1);
     }
 
     return {

@@ -32,22 +32,22 @@ export function createAssetData(): DictionaryValue<AssetData> {
         serialize: (src: any, buidler: any) => {
             buidler.storeUint(src.sRate, 64);
             buidler.storeUint(src.bRate, 64);
-            buidler.storeUint(src.totalSupply, 64);
-            buidler.storeUint(src.totalBorrow, 64);
+            buidler.storeInt(src.totalSupply, 64);
+            buidler.storeInt(src.totalBorrow, 64);
             buidler.storeUint(src.lastAccural, 32);
             buidler.storeUint(src.balance, 64);
             buidler.storeUint(src.trackingSupplyIndex, 64);
             buidler.storeUint(src.trackingBorrowIndex, 64);
         },
         parse: (src: Slice) => {
-            const sRate = BigInt(src.loadInt(64));
-            const bRate = BigInt(src.loadInt(64));
-            const totalSupply = BigInt(src.loadInt(64));
-            const totalBorrow = BigInt(src.loadInt(64));
-            const lastAccural = BigInt(src.loadInt(32));
-            const balance = BigInt(src.loadInt(64));
-            const trackingSupplyIndex = BigInt(src.loadUint(64));
-            const trackingBorrowIndex = BigInt(src.loadUint(64));
+            const sRate = src.loadUintBig(64);
+            const bRate = src.loadUintBig(64);
+            const totalSupply = src.loadIntBig(64);
+            const totalBorrow = src.loadIntBig(64);
+            const lastAccural = src.loadUintBig(32);
+            const balance = src.loadUintBig(64);
+            const trackingSupplyIndex = src.loadUintBig(64);;
+            const trackingBorrowIndex = src.loadUintBig(64);
 
             return { sRate, bRate, totalSupply, totalBorrow, lastAccural, balance, trackingSupplyIndex, trackingBorrowIndex};        },
     };
@@ -141,7 +141,7 @@ export function parseMasterData(masterDataBOC: string, testnet: boolean = false)
         newMasterCode: loadMaybeMyRef(upgradeConfigParser),
         newUserCode: loadMaybeMyRef(upgradeConfigParser),
     };
-    upgradeConfigParser.endParse();
+    // upgradeConfigParser.endParse();
 
     const masterConfigSlice = masterSlice.loadRef().beginParse();
     const assetsConfigDict = masterConfigSlice.loadDict(Dictionary.Keys.BigUint(256), createAssetConfig());
@@ -168,7 +168,7 @@ export function parseMasterData(masterDataBOC: string, testnet: boolean = false)
         },
         tokenKeys: loadMaybeMyRef(masterConfigSlice),
     };
-    masterConfigSlice.endParse();
+    // masterConfigSlice.endParse();
 
     for (const [_, assetID] of Object.entries(ASSETS_ID)) {
         const assetData = assetsExtendedData.get(assetID) as ExtendedAssetData;
@@ -226,7 +226,7 @@ export function parseUserLiteData(
         backupCell2 = userSlice.loadMaybeRef();
     }
     
-    userSlice.endParse();
+    // userSlice.endParse();
 
     const userBalances = Dictionary.empty<bigint, UserBalance>();
 

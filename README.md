@@ -1,6 +1,6 @@
-# EVAA SDK
+# Coffin SDK(Based on EVAA SDK)
 
-The EVAA SDK is designed to easily integrate with the EVAA lending protocol on TON blockchain.
+The Coffin SDK is designed to easily integrate with the Coffin.Meme
 
 ## Documentation
 

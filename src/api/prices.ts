@@ -1,45 +1,34 @@
 import { Dictionary } from '@ton/core';
-import { MAINNET_ASSETS_ID, ORACLE_NFTS } from '../constants';
-import { PriceData, RawPriceData } from '../types/Common';
-import { getMedianPrice, loadPrices, packAssetsData, packOraclesData, packPrices, parsePrices, verifyPrices } from '../utils/priceUtils';
-import { MINIMAL_ORACLES_NUMBER } from '../config';
+import { MAINNET_ASSETS_ID } from '../constants';
+import { PriceData } from '../types/Common';
+import { Cell } from '@ton/ton';
 
-export async function getPrices(endpoints: String[] = ["api.stardust-mainnet.iotaledger.net", "iota.evaa.finance"], checkPrices = MAINNET_ASSETS_ID): Promise<PriceData> {
+export async function getPrices(endpoints: string[] = ["https://api.tonnel.network/coffin/getPrices"], checkPrices = MAINNET_ASSETS_ID): Promise<PriceData> {
     if (endpoints.length == 0) {
         throw new Error("Empty endpoint list");
     }
-    
-    const prices = await Promise.all(ORACLE_NFTS.map(async x => await parsePrices(await loadPrices(x.address, endpoints), x.id)));
+    // fetch data from all endpoints
 
-    let acceptedPrices: RawPriceData[] = prices.filter(verifyPrices(checkPrices));
-
-
-    if (acceptedPrices.length < MINIMAL_ORACLES_NUMBER) {
-        throw new Error("Prices are outdated");
+    const rawPrices: any[] = [];
+    for (const endpoint of endpoints) {
+        const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to fetch data from ${endpoint}`);
+        }
+        rawPrices.push(await response.json());
     }
-
-    if (acceptedPrices.length > MINIMAL_ORACLES_NUMBER && acceptedPrices.length % 2 == 0) {
-        acceptedPrices = acceptedPrices.slice(0, acceptedPrices.length - 1);  // to reduce fees, MINIMAL_ORACLES_NUMBER is odd
-    }
-
-    if (acceptedPrices.length != MINIMAL_ORACLES_NUMBER) {
-        const sortedByTimestamp = acceptedPrices.slice().sort((a, b) => b.timestamp - a.timestamp);
-        const newerPrices = sortedByTimestamp.slice(0, MINIMAL_ORACLES_NUMBER);
-        acceptedPrices = newerPrices.sort((a, b) => a.oracleId - b.oracleId);
-    }
-
-
-    const medianData = Object.values(checkPrices).map(assetId => ({ assetId: assetId, medianPrice: getMedianPrice(acceptedPrices, assetId)}));
-    const packedMedianData = packAssetsData(medianData);
-
-    const oraclesData = acceptedPrices.map(x => ({oracle: {id: x.oracleId, pubkey: x.pubkey}, data: {timestamp: x.timestamp, prices: x.dict}, signature: x.signature}));
-    const packedOracleData = packOraclesData(oraclesData, Object.values(checkPrices));
-
-    const dict = Dictionary.empty<bigint, bigint>();
-    medianData.forEach(x => dict.set(x.assetId, x.medianPrice));
-
+    // {
+    //     priceCell: string;
+    //     pricesPackedCell: string;
+    //     pricesPackedSignature: string;
+    // }
     return {
-        dict: dict,
-        dataCell: packPrices(packedMedianData, packedOracleData)
+        dict: Cell.fromBoc(Buffer.from(rawPrices[0].pricesPackedCell,'hex'))[0].beginParse().loadDictDirect(Dictionary.Keys.BigUint(256), Dictionary.Values.BigVarUint(4)),
+        dataCell: Cell.fromBoc(Buffer.from(rawPrices[0].priceCell,'hex'))[0]
     };
 }

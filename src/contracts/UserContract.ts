@@ -37,7 +37,7 @@ export class EvaaUser implements Contract {
         const state = (await provider.getState()).state;
         if (state.type === 'active') {
             this._liteData = parseUserLiteData(
-                state.data!.toString('base64url'),
+                state.data!.toString('base64'),
                 assetsData,
                 assetsConfig,
                 this.testnet,
@@ -99,7 +99,7 @@ export class EvaaUser implements Contract {
         const state = (await provider.getState()).state;
         if (state.type === 'active') {
             this._liteData = parseUserLiteData(
-                state.data!.toString('base64url'),
+                state.data!.toString('base64'),
                 assetsData,
                 assetsConfig,
                 this.testnet,
@@ -154,7 +154,7 @@ export class EvaaUser implements Contract {
             collateralAsset: this._data.liquidationData.greatestCollateralAsset,
             minCollateralAmount: this._data.liquidationData.minCollateralAmount,
             liquidationAmount: this._data.liquidationData.liquidationAmount,
-            tonLiquidation: this._data.liquidationData.greatestLoanAsset === MAINNET_ASSETS_ID.TON,
+            tonLiquidation: false,
         };
     }
 }

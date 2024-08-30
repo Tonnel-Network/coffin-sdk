@@ -25,6 +25,7 @@ import { parseMasterData } from '../api/parser';
 import { MasterData } from '../types/Master';
 import { JettonWallet } from './JettonWallet';
 import { getUserJettonWallet } from '../utils/userJettonWallet';
+import { CHAIN } from '@tonconnect/sdk';
 
 /**
  * Parameters for the Evaa contract
@@ -34,6 +35,7 @@ import { getUserJettonWallet } from '../utils/userJettonWallet';
 export type EvaaParameters = {
     testnet: boolean;
     debug?: boolean;
+    customMasterAddress?: Address;
 };
 
 /**
@@ -167,6 +169,9 @@ export class Evaa implements Contract {
         if (parameters?.testnet) {
             this.network = 'testnet';
             this.address = EVAA_MASTER_TESTNET;
+        }
+        if (parameters?.customMasterAddress) {
+            this.address = parameters.customMasterAddress;
         }
         this.debug = parameters?.debug;
     }
@@ -337,7 +342,7 @@ export class Evaa implements Contract {
                 throw Error('Via address is required for jetton supply');
             }
             const jettonWallet = provider.open(
-                JettonWallet.createFromAddress(getUserJettonWallet(via.address, parameters.assetID, this.network)),
+                JettonWallet.createFromAddress(getUserJettonWallet(via.address, parameters.assetID, this.network === 'testnet' ? CHAIN.TESTNET : CHAIN.MAINNET)),
             );
             await jettonWallet.sendTransfer(via, value, message);
         } else {
@@ -371,7 +376,7 @@ export class Evaa implements Contract {
                 throw Error('Via address is required for jetton liquidation');
             }
             const jettonWallet = provider.open(
-                JettonWallet.createFromAddress(getUserJettonWallet(via.address, parameters.loanAsset, this.network)),
+                JettonWallet.createFromAddress(getUserJettonWallet(via.address, parameters.loanAsset, this.network === 'testnet' ? CHAIN.TESTNET : CHAIN.MAINNET)),
             );
             await jettonWallet.sendTransfer(via, value, message);
         } else {
@@ -411,17 +416,17 @@ export class Evaa implements Contract {
     async getSync(provider: ContractProvider) {
         const state = (await provider.getState()).state;
         if (state.type === 'active') {
-            this._data = parseMasterData(state.data!.toString('base64url'), this.network === 'testnet');
-            if (this.network === 'testnet' && this._data.upgradeConfig.masterCodeVersion !== TESTNET_VERSION) {
-                throw Error(
-                    `Outdated SDK version. It supports only master code version ${TESTNET_VERSION} on testnet, but the current master code version is ${this._data.upgradeConfig.masterCodeVersion}`,
-                );
-            }
-            if (this.network === 'mainnet' && this._data.upgradeConfig.masterCodeVersion !== MAINNET_VERSION) {
-                throw Error(
-                    `Outdated SDK version. It supports only master code version ${MAINNET_VERSION} on mainnet, but the current master code version is ${this._data.upgradeConfig.masterCodeVersion}`,
-                );
-            }
+            this._data = parseMasterData(state.data!.toString('base64'), this.network === 'testnet');
+            // if (this.network === 'testnet' && this._data.upgradeConfig.masterCodeVersion !== TESTNET_VERSION) {
+            //     throw Error(
+            //         `Outdated SDK version. It supports only master code version ${TESTNET_VERSION} on testnet, but the current master code version is ${this._data.upgradeConfig.masterCodeVersion}`,
+            //     );
+            // }
+            // if (this.network === 'mainnet' && this._data.upgradeConfig.masterCodeVersion !== MAINNET_VERSION) {
+            //     throw Error(
+            //         `Outdated SDK version. It supports only master code version ${MAINNET_VERSION} on mainnet, but the current master code version is ${this._data.upgradeConfig.masterCodeVersion}`,
+            //     );
+            // }
             this.lastSync = Math.floor(Date.now() / 1000);
         } else {
             throw Error('Master contract is not active');

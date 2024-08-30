@@ -79,3 +79,4 @@ export {
 // Utils
 export { getLastSentBoc, getTonConnectSender } from './utils/tonConnectSender';
 export { getUserJettonWallet } from './utils/userJettonWallet';
+

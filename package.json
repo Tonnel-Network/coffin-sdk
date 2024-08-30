@@ -1,7 +1,7 @@
 {
-  "name": "@evaafi/sdk",
-  "version": "0.5.1",
-  "description": "SDK for EVAA contracts",
+  "name": "coffin-sdk",
+  "version": "0.0.7",
+  "description": "SDK for Coffin contracts",
   "main": "dist/index.js",
   "files": [
     "dist",
@@ -12,13 +12,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/evaafi/sdk.git"
+    "url": "git+https://github.com/Tonnel-Network/coffin-sdk.git"
   },
-  "author": "EVAA Finance",
+  "author": "Coffen.Meme",
   "license": "MIT",
-  "homepage": "https://github.com/evaafi/sdk#readme",
+  "homepage": "https://github.com/Tonnel-Network/coffin-sdk#readme",
   "devDependencies": {
     "@ton/core": "0.56.0",
+    "@ton/crypto": "^3.3.0",
     "@tonconnect/sdk": "^3.0.0",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.10.4",
@@ -35,6 +36,7 @@
   },
   "dependencies": {
     "@ton/ton": "^14.0.0",
+    "buffer": "^6.0.3",
     "promise.any": "^2.0.6"
   }
 }

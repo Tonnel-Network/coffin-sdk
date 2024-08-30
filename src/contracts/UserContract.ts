@@ -154,7 +154,7 @@ export class EvaaUser implements Contract {
             collateralAsset: this._data.liquidationData.greatestCollateralAsset,
             minCollateralAmount: this._data.liquidationData.minCollateralAmount,
             liquidationAmount: this._data.liquidationData.liquidationAmount,
-            tonLiquidation: this._data.liquidationData.greatestLoanAsset === MAINNET_ASSETS_ID.TON,
+            tonLiquidation: false,
         };
     }
 }

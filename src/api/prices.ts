@@ -1,69 +1,35 @@
-import { beginCell, Cell, Dictionary } from '@ton/core';
-import { NFT_ID } from '../constants';
+import { Dictionary } from '@ton/core';
+import { MAINNET_ASSETS_ID } from '../constants';
 import { PriceData } from '../types/Common';
+import { Cell } from '@ton/ton';
 
-type NftData = {
-    ledgerIndex: number;
-    pageSize: number;
-    items: string[];
-};
+export async function getPrices(endpoints: string[] = ["https://api.tonnel.network/coffin/getPrices"], checkPrices = MAINNET_ASSETS_ID): Promise<PriceData> {
+    if (endpoints.length == 0) {
+        throw new Error("Empty endpoint list");
+    }
+    // fetch data from all endpoints
 
-type OutputData = {
-    metadata: {
-        blockId: string;
-        transactionId: string;
-        outputIndex: number;
-        isSpent: boolean;
-        milestoneIndexSpent: number;
-        milestoneTimestampSpent: number;
-        transactionIdSpent: string;
-        milestoneIndexBooked: number;
-        milestoneTimestampBooked: number;
-        ledgerIndex: number;
-    };
-    output: {
-        type: number;
-        amount: string;
-        nftId: string;
-        unlockConditions: {
-            type: number;
-            address: {
-                type: number;
-                pubKeyHash: string;
-            };
-        }[];
-        features: {
-            type: number;
-            data: string;
-        }[];
-    };
-}
-
-export async function getPrices(endpoints: string[] = ["api.stardust-mainnet.iotaledger.net"]) {
-    return await Promise.any(endpoints.map(x => loadPrices(x)));
-}
-
-async function loadPrices(endpoint: String = "api.stardust-mainnet.iotaledger.net"): Promise<PriceData> {
-    let result = await fetch(`https://${endpoint}/api/indexer/v1/outputs/nft/${NFT_ID}`, {
-        headers: { accept: 'application/json' },
-    });
-    let outputId = (await result.json()) as NftData;
-
-    result = await fetch(`https://${endpoint}/api/core/v2/outputs/${outputId.items[0]}`, {
-        headers: { accept: 'application/json' },
-    });
-
-    let resData = (await result.json()) as OutputData;
-
-    const data = JSON.parse(
-        decodeURIComponent(resData.output.features[0].data.replace('0x', '').replace(/[0-9a-f]{2}/g, '%$&')),
-    );
-
-    const pricesCell = Cell.fromBoc(Buffer.from(data['packedPrices'], 'hex'))[0];
-    const signature = Buffer.from(data['signature'], 'hex');
-
+    const rawPrices: any[] = [];
+    for (const endpoint of endpoints) {
+        const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to fetch data from ${endpoint}`);
+        }
+        rawPrices.push(await response.json());
+    }
+    // {
+    //     priceCell: string;
+    //     pricesPackedCell: string;
+    //     pricesPackedSignature: string;
+    // }
     return {
-        dict: pricesCell.beginParse().loadDictDirect(Dictionary.Keys.BigUint(256), Dictionary.Values.BigUint(64)),
-        dataCell: beginCell().storeRef(pricesCell).storeBuffer(signature).endCell(),
+        dict: Cell.fromBoc(Buffer.from(rawPrices[0].pricesPackedCell,'hex'))[0].beginParse().loadDictDirect(Dictionary.Keys.BigUint(256), Dictionary.Values.BigVarUint(4)),
+        dataCell: Cell.fromBoc(Buffer.from(rawPrices[0].priceCell,'hex'))[0]
+
     };
 }

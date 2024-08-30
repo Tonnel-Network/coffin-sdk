@@ -11,6 +11,7 @@ export {
     getAvailableToBorrow,
     presentValue,
     calculateLiquidationData,
+    predictHealthFactor
 } from './api/math';
 
 // Parser
@@ -46,6 +47,7 @@ export {
     ExtendedAssetData,
     MasterData,
 } from './types/Master';
+
 export {
     BalanceType,
     UserBalance,
@@ -61,6 +63,8 @@ export {
 
 // Constants
 export {
+    MAINNET_ASSETS_ID,
+    TESTNET_ASSETS_ID,
     EVAA_MASTER_MAINNET,
     MAINNET_VERSION,
     EVAA_MASTER_TESTNET,
@@ -75,3 +79,4 @@ export {
 // Utils
 export { getLastSentBoc, getTonConnectSender } from './utils/tonConnectSender';
 export { getUserJettonWallet } from './utils/userJettonWallet';
+

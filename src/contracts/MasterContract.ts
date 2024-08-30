@@ -8,6 +8,7 @@ import {
     Sender,
     SendMode,
     storeStateInit,
+    toNano,
 } from '@ton/core';
 import {
     EVAA_MASTER_MAINNET,
@@ -24,6 +25,7 @@ import { parseMasterData } from '../api/parser';
 import { MasterData } from '../types/Master';
 import { JettonWallet } from './JettonWallet';
 import { getUserJettonWallet } from '../utils/userJettonWallet';
+import { CHAIN } from '@tonconnect/sdk';
 
 /**
  * Parameters for the Evaa contract
@@ -33,6 +35,7 @@ import { getUserJettonWallet } from '../utils/userJettonWallet';
 export type EvaaParameters = {
     testnet: boolean;
     debug?: boolean;
+    customMasterAddress?: Address;
 };
 
 /**
@@ -59,9 +62,8 @@ export type SupplyBaseParameters = {
     amount: bigint;
     userAddress: Address;
     assetID: bigint;
-    /* Will be in v6 
     amountToTransfer: bigint;
-    payload: Cell; */
+    payload: Cell;
 };
 /**
  * Parameters for the TON supply message
@@ -94,10 +96,9 @@ export type WithdrawParameters = {
     amount: bigint;
     userAddress: Address;
     includeUserCode: boolean;
-    priceData: Cell;
-    /* Will be in v6 
+    priceData: Cell; 
     amountToTransfer: bigint;
-    payload: Cell; */
+    payload: Cell;
 };
 
 /**
@@ -116,6 +117,7 @@ export type LiquidationBaseData = {
     minCollateralAmount: bigint;
     liquidationAmount: bigint;
     tonLiquidation: boolean;
+    forwardAmount?: bigint;
 };
 
 /**
@@ -130,6 +132,7 @@ export type LiquidationBaseParameters = LiquidationBaseData & {
     liquidatorAddress: Address;
     includeUserCode: boolean;
     priceData: Cell;
+    payload: Cell;
 };
 
 /**
@@ -167,6 +170,9 @@ export class Evaa implements Contract {
             this.network = 'testnet';
             this.address = EVAA_MASTER_TESTNET;
         }
+        if (parameters?.customMasterAddress) {
+            this.address = parameters.customMasterAddress;
+        }
         this.debug = parameters?.debug;
     }
 
@@ -190,9 +196,8 @@ export class Evaa implements Contract {
                         .storeUint(OPCODES.SUPPLY, 32)
                         .storeInt(parameters.includeUserCode ? -1 : 0, 2)
                         .storeAddress(parameters.userAddress)
-                        /* Will be in v6 
                         .storeUint(parameters.amountToTransfer, 64)
-                        .storeRef(parameters.payload) */
+                        .storeRef(parameters.payload)
                         .endCell(),
                 )
                 .endCell();
@@ -203,9 +208,8 @@ export class Evaa implements Contract {
                 .storeInt(parameters.includeUserCode ? -1 : 0, 2)
                 .storeUint(parameters.amount, 64)
                 .storeAddress(parameters.userAddress)
-                /* Will be in v6 
                 .storeUint(parameters.amountToTransfer, 64)
-                .storeRef(parameters.payload) */
+                .storeRef(parameters.payload)
                 .endCell();
         }
     }
@@ -222,9 +226,8 @@ export class Evaa implements Contract {
             .storeUint(parameters.amount, 64)
             .storeAddress(parameters.userAddress)
             .storeInt(parameters.includeUserCode ? -1 : 0, 2)
-            /* Will be in v6 
             .storeUint(parameters.amountToTransfer, 64)
-            .storeRef(parameters.payload) */
+            .storeRef(parameters.payload)
             .storeRef(parameters.priceData)
             .endCell();
     }
@@ -255,6 +258,10 @@ export class Evaa implements Contract {
                         // do not need liquidationAmount in case of jetton liquidation because
                         // the exact amount of transferred jettons for liquidation is known
                         .storeUint(0, 64)
+                        .storeRef(beginCell()
+                            .storeUint(parameters.forwardAmount ?? 0, 64) // idk .. ) todo check
+                            .storeRef(parameters.payload)
+                        .endCell())
                         .storeRef(parameters.priceData)
                         .endCell(),
                 )
@@ -269,6 +276,10 @@ export class Evaa implements Contract {
                 .storeUint(parameters.minCollateralAmount, 64)
                 .storeInt(parameters.includeUserCode ? -1 : 0, 2)
                 .storeUint(parameters.liquidationAmount, 64)
+                .storeRef(beginCell()
+                    .storeUint(parameters.forwardAmount ?? 0, 64) // idk .. ) todo check
+                    .storeRef(parameters.payload)
+                .endCell())
                 .storeRef(parameters.priceData)
                 .endCell();
         }
@@ -331,7 +342,7 @@ export class Evaa implements Contract {
                 throw Error('Via address is required for jetton supply');
             }
             const jettonWallet = provider.open(
-                JettonWallet.createFromAddress(getUserJettonWallet(via.address, parameters.assetID, this.network)),
+                JettonWallet.createFromAddress(getUserJettonWallet(via.address, parameters.assetID, this.network === 'testnet' ? CHAIN.TESTNET : CHAIN.MAINNET)),
             );
             await jettonWallet.sendTransfer(via, value, message);
         } else {
@@ -365,7 +376,7 @@ export class Evaa implements Contract {
                 throw Error('Via address is required for jetton liquidation');
             }
             const jettonWallet = provider.open(
-                JettonWallet.createFromAddress(getUserJettonWallet(via.address, parameters.loanAsset, this.network)),
+                JettonWallet.createFromAddress(getUserJettonWallet(via.address, parameters.loanAsset, this.network === 'testnet' ? CHAIN.TESTNET : CHAIN.MAINNET)),
             );
             await jettonWallet.sendTransfer(via, value, message);
         } else {
@@ -406,16 +417,17 @@ export class Evaa implements Contract {
         const state = (await provider.getState()).state;
         if (state.type === 'active') {
             this._data = parseMasterData(state.data!.toString('base64'), this.network === 'testnet');
-            if (this.network === 'testnet' && this._data.upgradeConfig.masterCodeVersion !== TESTNET_VERSION) {
-                throw Error(
-                    `Outdated SDK version. It supports only master code version ${TESTNET_VERSION} on testnet, but the current master code version is ${this._data.upgradeConfig.masterCodeVersion}`,
-                );
-            }
-            if (this.network === 'mainnet' && this._data.upgradeConfig.masterCodeVersion !== MAINNET_VERSION) {
-                throw Error(
-                    `Outdated SDK version. It supports only master code version ${MAINNET_VERSION} on mainnet, but the current master code version is ${this._data.upgradeConfig.masterCodeVersion}`,
-                );
-            }
+            // if (this.network === 'testnet' && this._data.upgradeConfig.masterCodeVersion !== TESTNET_VERSION) {
+            //     throw Error(
+            //         `Outdated SDK version. It supports only master code version ${TESTNET_VERSION} on testnet, but the current master code version is ${this._data.upgradeConfig.masterCodeVersion}`,
+            //     );
+            // }
+            // if (this.network === 'mainnet' && this._data.upgradeConfig.masterCodeVersion !== MAINNET_VERSION) {
+            //     throw Error(
+            //         `Outdated SDK version. It supports only master code version ${MAINNET_VERSION} on mainnet, but the current master code version is ${this._data.upgradeConfig.masterCodeVersion}`,
+            //     );
+            // }
+
             this.lastSync = Math.floor(Date.now() / 1000);
         } else {
             throw Error('Master contract is not active');
